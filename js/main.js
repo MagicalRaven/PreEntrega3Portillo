@@ -107,6 +107,10 @@ function create() {
     this.physics.add.collider(player, ground);
     this.physics.add.collider(player, obstacles, hitObstacle, null, this);
     this.physics.add.collider(player, groundHazards, hitHazard, null, this);
+
+    // Botones de guardar y cargar
+    document.getElementById('saveBtn').addEventListener('click', saveGame);
+    document.getElementById('loadBtn').addEventListener('click', loadGame);
 }
 
 function update() {
@@ -175,6 +179,77 @@ function hitHazard(player, hazard) {
     gameOver = true;
     obstacleTimer.remove();
     hazardTimer.remove();
+}
+
+// Guardar el estado del juego
+function saveGame() {
+    const gameState = {
+        player: {
+            x: player.x,
+            y: player.y,
+            velocity: {
+                x: player.body.velocity.x,
+                y: player.body.velocity.y
+            }
+        },
+        obstacles: obstacles.getChildren().map(obstacle => ({
+            x: obstacle.x,
+            y: obstacle.y,
+            velocity: {
+                x: obstacle.body.velocity.x,
+                y: obstacle.body.velocity.y
+            }
+        })),
+        groundHazards: groundHazards.getChildren().map(hazard => ({
+            x: hazard.x,
+            y: hazard.y,
+            velocity: {
+                x: hazard.body.velocity.x,
+                y: hazard.body.velocity.y
+            }
+        })),
+        gameOver: gameOver
+    };
+    localStorage.setItem('gameState', JSON.stringify(gameState));
+    alert('Juego guardado!');
+}
+
+// Cargar el estado del juego
+function loadGame() {
+    const savedState = localStorage.getItem('gameState');
+    if (savedState) {
+        const gameState = JSON.parse(savedState);
+
+        player.setPosition(gameState.player.x, gameState.player.y);
+        player.setVelocity(gameState.player.velocity.x, gameState.player.velocity.y);
+
+        obstacles.clear(true, true);
+        gameState.obstacles.forEach(obstacleData => {
+            let obstacle = obstacles.create(obstacleData.x, obstacleData.y, 'obstacle');
+            obstacle.setVelocity(obstacleData.velocity.x, obstacleData.velocity.y);
+            obstacle.setCollideWorldBounds(true);
+            obstacle.setBounce(1);
+        });
+
+        groundHazards.clear(true, true);
+        gameState.groundHazards.forEach(hazardData => {
+            let hazard = groundHazards.create(hazardData.x, hazardData.y, 'hazard');
+            hazard.setVelocity(hazardData.velocity.x, hazardData.velocity.y);
+            hazard.setCollideWorldBounds(true);
+        });
+
+        gameOver = gameState.gameOver;
+        if (gameOver) {
+            this.physics.pause();
+            player.setTint(0xff0000);
+            player.anims.play('turn');
+            obstacleTimer.remove();
+            hazardTimer.remove();
+        }
+        alert('Juego cargado!');
+    } else {
+        alert('No se encontró ningún estado guardado.');
+    }
 }
 
 // Ajustar el tamaño del juego cuando se cambie el tamaño de la ventana
